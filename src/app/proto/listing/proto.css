@@ -1,0 +1,205 @@
+/* ---------- Picker: harness chrome, copied verbatim from the skill spec ---------- */
+
+.proto-picker {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(10, 10, 10, 0.82);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+    0 8px 24px rgba(0, 0, 0, 0.24),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.proto-picker-highlight {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  will-change: transform;
+}
+
+/* The slide is enabled only after first paint (data-ready), so load doesn't animate. */
+.proto-picker[data-ready] .proto-picker-highlight {
+  transition:
+    transform 250ms cubic-bezier(0.23, 1, 0.32, 1),
+    width 250ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .proto-picker[data-ready] .proto-picker-highlight { transition: none; }
+}
+
+.proto-picker-item {
+  position: relative; /* sits above the highlight */
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55);
+  font: inherit;
+  cursor: pointer;
+  transition: color 150ms ease-out;
+}
+
+.proto-picker-item:hover {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.proto-picker-item:active {
+  transform: scale(0.97);
+}
+
+.proto-picker-item:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.4);
+  outline-offset: 2px;
+}
+
+.proto-picker-item[data-active] {
+  color: #fff;
+}
+
+.proto-picker-divider {
+  width: 1px;
+  height: 16px;
+  margin: 0 4px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.proto-picker-replay {
+  padding: 0 10px;
+  font-size: 14px;
+}
+
+.proto-picker[data-position="top"] {
+  bottom: auto;
+  top: 24px;
+}
+
+/* ---------- Variant scopes: each remaps the theme tokens and its two fonts ---------- */
+
+.proto-stage {
+  font-synthesis: none;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--text-font);
+}
+
+/* Keeps the last line clear of the picker without leaving a strip under a dark footer. */
+.proto-stage > footer {
+  padding-bottom: 88px;
+}
+
+.proto-stage :is(h1, h2, h3, h4),
+.proto-stage .display {
+  font-family: var(--display-font);
+}
+
+.proto-stage :is(a, button, input, select, summary) {
+  touch-action: manipulation;
+}
+
+.proto-stage :is(a, button, summary) {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.proto-stage :is(button, label) {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.proto-stage a:active {
+  opacity: 0.7;
+}
+
+.proto-stage p {
+  text-wrap: pretty;
+}
+
+/* Neutral focus ring; dark sections set --focus-color to a light value. */
+.proto-stage :focus-visible {
+  outline: 2px solid var(--focus-color, var(--foreground));
+  outline-offset: 3px;
+}
+
+/* A hairline keeps pale walls and skies from dissolving into the page, and the
+   tint holds the photo's place while it loads. */
+.proto-stage img:not(.no-outline) {
+  background: var(--muted);
+  outline: 1px solid rgb(0 0 0 / 0.07);
+  outline-offset: -1px;
+}
+
+.proto-stage [id] {
+  scroll-margin-top: var(--anchor-offset, 96px);
+}
+
+/* 1. Atelier: soft grey and white bands, slate text, brown accents, navy footer. */
+.v-atelier {
+  --anchor-offset: 24px;
+  --display-font: var(--font-italiana), "Cormorant Garamond", Georgia, serif;
+  --text-font: var(--font-open-sans), "Helvetica Neue", Arial, sans-serif;
+  --background: #f3f3f1;
+  --card: #fcfcfc;
+  --foreground: #43536a;
+  --primary: #755138;
+  --primary-foreground: #fcfcfc;
+  --muted: #e8e8e4;
+  --muted-foreground: #5d6b80;
+  --accent: #eae0cd;
+  --footer: #2e3b4e;
+  --footer-foreground: #f3f3f1;
+  --border: rgba(67, 83, 106, 0.24);
+  --input: rgba(67, 83, 106, 0.5);
+}
+
+/* 2. Classic: the repo's existing ivory and olive theme, unchanged. */
+.v-classic {
+  --display-font: "Cormorant Garamond", Georgia, serif;
+  --text-font: "Manrope", Arial, sans-serif;
+}
+
+/* 3. Planner: clean paper, spruce green, and a warm marker tone for totals. */
+.v-planner {
+  --anchor-offset: 132px;
+  --display-font: var(--font-fraunces), Georgia, serif;
+  --text-font: var(--font-hanken), "Helvetica Neue", Arial, sans-serif;
+  --background: #f9f8f4;
+  --foreground: #17201c;
+  --card: #ffffff;
+  --primary: #1e4a3d;
+  --primary-foreground: #f9f8f4;
+  --muted: #efede6;
+  --muted-foreground: #58615b;
+  --accent: #f3e7c9;
+  --accent-foreground: #4a3a0c;
+  --border: rgba(23, 32, 28, 0.14);
+  --input: rgba(23, 32, 28, 0.4);
+}
+
+.proto-stage .no-scrollbar {
+  scrollbar-width: none;
+}
+.proto-stage .no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
