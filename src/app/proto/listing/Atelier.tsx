@@ -1,8 +1,15 @@
 "use client";
 
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 import Image from "next/image";
-import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { type ReactNode, useState } from "react";
+import { LodgePhotoCarousel } from "@/app/proto/listing/LodgePhotoCarousel";
+import { GatheringCarousel } from "@/app/proto/listing/GatheringCarousel";
+import { BedroomCarousel } from "@/app/proto/listing/BedroomCarousel";
+import { LodgeHeader } from "@/components/layouts/LodgeHeader";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { protoFontVariables } from "@/app/proto/listing/fonts";
 import { formatDate, guestOptions, useBooking } from "./booking";
 import { bedrooms, lodge, money, type Photo, photos, pricing } from "./data";
 
@@ -18,13 +25,15 @@ const copy = "leading-[1.65]";
 const indent = "md:pl-[4.5rem]";
 const outlineButton =
   "inline-flex h-[4.25rem] items-center justify-center border border-foreground px-8 text-[13px] uppercase tracking-[0.22em] transition-[color,background-color,border-color,transform] duration-150 ease-out hover:bg-foreground hover:text-card active:scale-[0.96]";
+const availabilityButton = `${outlineButton} h-14 w-full max-w-[24rem] gap-3 rounded-none border-border bg-transparent px-10 py-3 font-normal shadow-none has-[>svg]:px-10 max-[360px]:tracking-[0.16em]`;
 
 const navLinks = [
   ["#lodge", "The lodge"],
   ["#bedrooms", "Bedrooms"],
   ["#gather", "Gathering"],
+  ["/gallery", "Gallery"],
   ["#reserve", "Reserve"],
-];
+] as const;
 
 const heroPhotos = [
   photos.aerialLawn,
@@ -36,111 +45,26 @@ const heroPhotos = [
 
 const gatherings: { title: string; text: string; photo: Photo | null }[] = [
   {
-    title: "The rooftop",
+    title: "The Rooftop",
     text: "A private terrace with a hot tub and outdoor sofas, open to the peaks.",
     photo: photos.rooftop,
   },
   {
-    title: "The fire pit",
+    title: "The Fire Pit",
     text: "Armchairs on a stone patio beside the creek, with a BBQ area close by.",
     photo: photos.firePit,
   },
   {
-    title: "The pub",
+    title: "The Pub",
     text: "A bar, a pool table, a poker table, a dartboard and games, down in the basement.",
     photo: null,
   },
   {
-    title: "The grounds",
+    title: "The Grounds",
     text: "A lawn among the evergreens that runs down to the water.",
     photo: photos.aerialCreek,
   },
 ];
-
-/** A horizontal strip the visitor moves with the buttons, a swipe or the keyboard. */
-function useStrip(count: number) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [index, setIndex] = useState(0);
-  const [atEnd, setAtEnd] = useState(false);
-
-  useEffect(() => {
-    const strip = ref.current;
-    if (!strip) return;
-    const update = () => {
-      const items = Array.from(strip.children) as HTMLElement[];
-      const origin = items[0]?.offsetLeft ?? 0;
-      let nearest = 0;
-      items.forEach((item, i) => {
-        if (
-          Math.abs(item.offsetLeft - origin - strip.scrollLeft) <
-          Math.abs(items[nearest].offsetLeft - origin - strip.scrollLeft)
-        )
-          nearest = i;
-      });
-      setIndex(nearest);
-      setAtEnd(strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 4);
-    };
-    update();
-    strip.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", update);
-    return () => {
-      strip.removeEventListener("scroll", update);
-      window.removeEventListener("resize", update);
-    };
-  }, []);
-
-  const go = useCallback(
-    (step: number) => {
-      const strip = ref.current;
-      if (!strip) return;
-      const items = Array.from(strip.children) as HTMLElement[];
-      const target = items[Math.min(count - 1, Math.max(0, index + step))];
-      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      strip.scrollTo({
-        left: target.offsetLeft - items[0].offsetLeft,
-        behavior: reduce ? "auto" : "smooth",
-      });
-    },
-    [count, index],
-  );
-
-  return { ref, index, atEnd, go };
-}
-
-function StripControls({
-  strip,
-  count,
-  label,
-}: {
-  strip: ReturnType<typeof useStrip>;
-  count: number;
-  label: string;
-}) {
-  const round =
-    "inline-flex size-12 shrink-0 items-center justify-center rounded-full border border-foreground/60 transition-[color,background-color,border-color,transform] duration-150 ease-out enabled:hover:bg-foreground enabled:hover:text-card enabled:active:scale-[0.96] disabled:cursor-not-allowed disabled:border-border disabled:text-muted-foreground";
-  return (
-    <div className="flex items-center gap-4">
-      <button
-        type="button"
-        aria-label={`Previous ${label}`}
-        disabled={strip.index === 0}
-        onClick={() => strip.go(-1)}
-        className={round}
-      >
-        <ChevronLeft aria-hidden="true" strokeWidth={1.25} className="size-5" />
-      </button>
-      <button
-        type="button"
-        aria-label={`Next ${label}`}
-        disabled={strip.atEnd || strip.index === count - 1}
-        onClick={() => strip.go(1)}
-        className={round}
-      >
-        <ChevronRight aria-hidden="true" strokeWidth={1.25} className="size-5" />
-      </button>
-    </div>
-  );
-}
 
 function TextBlock({
   title,
@@ -161,101 +85,39 @@ function TextBlock({
 }
 
 export function Atelier() {
-  const hero = useStrip(heroPhotos.length);
-  const gather = useStrip(gatherings.length);
   const [room, setRoom] = useState(0);
-  const activeRoom = bedrooms[room];
 
   return (
     <div id="top" className="proto-stage v-atelier">
-      <header className="px-5">
-        <div className="relative flex items-center justify-between gap-4 py-5 md:justify-center md:py-6">
-          <a href="#top" className="py-1 md:text-center">
-            <span className="display block text-[1.75rem] uppercase leading-none tracking-[0.08em] md:text-[2rem]">
-              Creekside
-            </span>
-            <span className="mt-1.5 block whitespace-nowrap text-[10px] uppercase leading-none tracking-[0.24em]">
-              Canmore · Alberta
-            </span>
-          </a>
-          <a
-            href="#reserve"
-            className={`${caps} flex items-center gap-2.5 whitespace-nowrap py-3 text-xs transition-colors md:text-[13px] duration-150 ease-out hover:text-primary md:absolute md:right-0`}
-          >
-            Check availability
-            <CalendarDays aria-hidden="true" strokeWidth={1.25} className="size-[18px] shrink-0" />
-          </a>
-        </div>
-        <nav
-          aria-label="Page sections"
-          className={`${caps} no-scrollbar flex gap-x-9 overflow-x-auto border-y border-border md:justify-center md:gap-x-[4.5rem]`}
-        >
-          {navLinks.map(([href, text]) => (
-            <a
-              key={href}
-              href={href}
-              className="shrink-0 py-5 transition-colors duration-150 ease-out hover:text-primary md:py-6"
-            >
-              {text}
-            </a>
-          ))}
-        </nav>
-      </header>
+      <LodgeHeader links={navLinks} />
 
       <main>
-        <section className="grid gap-y-12 pb-16 pt-14 md:grid-cols-2 md:pb-24 md:pt-28">
-          <div className={`${gutter} md:pr-16`}>
-            <h1 className="text-[clamp(2.75rem,4.4vw,3.75rem)] leading-[1.1] md:pl-4">
+        <section className="grid gap-y-4 pb-16 pt-8 md:grid-cols-2 md:gap-y-8 md:pb-24 md:pt-16 lg:grid-rows-[auto_1fr] lg:pt-28">
+          <div className={`${gutter} md:col-span-2 lg:col-span-1 lg:col-start-1 lg:row-start-1 lg:pr-16`}>
+            <h1 className="text-[clamp(2.625rem,12.3vw,2.875rem)] leading-[1.1] md:text-[clamp(2.75rem,4.4vw,3.75rem)]">
               The Full Retreat
             </h1>
-            <p className={`${caps} mt-9 md:mt-12`}>
-              Canmore <span aria-hidden="true">›</span> Creekside Lodge
-            </p>
+          </div>
+          <div className={`${gutter} md:pr-8 lg:col-start-1 lg:row-start-2 lg:pr-16`}>
+            <Button asChild variant="outline" className={availabilityButton}>
+              <a href="#reserve">
+                Check availability
+                <CalendarDays aria-hidden="true" strokeWidth={1.25} className="size-[18px] shrink-0" />
+              </a>
+            </Button>
             <div aria-hidden="true" className="mt-6 h-px max-w-[24rem] bg-border" />
-            <p className="display mt-10 max-w-[22ch] text-2xl leading-[1.25] text-primary md:mt-12">
+            <p className="display mt-10 max-w-[22ch] text-2xl leading-[1.25] text-primary md:mt-9 lg:mt-12">
               Two homes beside a creek in the Rockies, joined into one five-bedroom lodge for
               sixteen.
             </p>
-            <p className={`${copy} ${indent} mt-10 max-w-[30rem] md:mt-12`}>
+            <p className={`${copy} ${indent} mt-10 max-w-[30rem] md:mt-8 lg:mt-12`}>
               A private rooftop hot tub, a pub in the basement and Canmore’s Main Street one block
               from the door.
             </p>
           </div>
 
-          <div className="min-w-0">
-            <div
-              ref={hero.ref}
-              role="group"
-              aria-label="Photographs of the lodge"
-              tabIndex={0}
-              className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain px-6 md:pl-0 md:pr-[7.7vw]"
-            >
-              {heroPhotos.map((photo, index) => (
-                <Image
-                  key={photo.src}
-                  src={photo.src}
-                  alt={photo.alt}
-                  width={photo.width}
-                  height={photo.height}
-                  sizes="(min-width: 768px) 45vw, 85vw"
-                  priority={index === 0}
-                  className="h-[clamp(17rem,34vw,30rem)] w-auto max-w-none shrink-0 snap-start"
-                />
-              ))}
-            </div>
-            <div className="mt-8 flex items-center gap-6 px-6 md:mt-10 md:pl-0 md:pr-[7.7vw]">
-              <div aria-hidden="true" className="relative h-0.5 flex-1 bg-accent">
-                <span
-                  className="absolute inset-y-0 left-0 bg-primary/60"
-                  style={{ width: `${((hero.index + 1) / heroPhotos.length) * 100}%` }}
-                />
-              </div>
-              <p className={`${caps} tabular-nums`} aria-live="polite">
-                {String(hero.index + 1).padStart(2, "0")} /{" "}
-                {String(heroPhotos.length).padStart(2, "0")}
-              </p>
-              <StripControls strip={hero} count={heroPhotos.length} label="photograph" />
-            </div>
+          <div className="mt-8 min-w-0 md:mt-0 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+            <LodgePhotoCarousel photos={heroPhotos} />
           </div>
         </section>
 
@@ -278,9 +140,12 @@ export function Atelier() {
               The whole property is yours: both homes, {lodge.beds} beds across five bedrooms,
               several lounges, a dining area for the full group and the grounds down to the water.
             </p>
-            <a href="#reserve" className={`${outlineButton} mt-12`}>
-              Check availability
-            </a>
+            <Button asChild variant="outline" className={`${availabilityButton} mt-12`}>
+              <a href="#reserve">
+                Check availability
+                <CalendarDays aria-hidden="true" strokeWidth={1.25} className="size-[18px] shrink-0" />
+              </a>
+            </Button>
           </div>
           <Image
             src={photos.aerialCreek.src}
@@ -303,10 +168,11 @@ export function Atelier() {
               className="aspect-[4/3] w-full object-cover md:aspect-square"
             />
             <div className={`${gutter} md:pl-[8vw]`}>
+              <p className="display mb-4 text-2xl leading-[1.25] text-primary">The Lodge</p>
               <TextBlock
                 title={
                   <>
-                    A newly updated <span className="md:block">mountain home</span>
+                    A Newly Updated <span className="md:block">Mountain Home</span>
                   </>
                 }
                 first="Log beams, a stone fireplace and timber-framed windows were kept. Around them the interior has been redone in a rustic mountain style."
@@ -324,7 +190,7 @@ export function Atelier() {
               <TextBlock
                 title={
                   <>
-                    More about <span className="md:block">the lodge</span>
+                    More About <span className="md:block">The Lodge</span>
                   </>
                 }
                 first="Every bedroom looks out at the Rockies, and the creek runs along the edge of the lawn."
@@ -361,9 +227,9 @@ export function Atelier() {
                       type="button"
                       aria-pressed={index === room}
                       onClick={() => setRoom(index)}
-                      className="grid min-h-14 w-full grid-cols-[2.5rem_1fr] items-baseline gap-x-3 py-3 text-left transition-colors duration-150 ease-out hover:text-primary aria-pressed:text-primary"
+                      className="group grid min-h-14 w-full grid-cols-[2.5rem_1fr] items-baseline gap-x-3 py-3 text-left transition-colors duration-150 ease-out hover:text-primary aria-pressed:font-medium aria-pressed:text-primary"
                     >
-                      <span className="display text-xl tabular-nums">
+                      <span className="display text-xl tabular-nums group-aria-pressed:[-webkit-text-stroke:0.25px_currentColor]">
                         {String(index + 1).padStart(2, "0")}
                       </span>
                       <span>
@@ -375,71 +241,22 @@ export function Atelier() {
                 ))}
               </ul>
             </div>
-            <figure>
-              {activeRoom.photo && (
-                <Image
-                  key={activeRoom.photo.src}
-                  src={activeRoom.photo.src}
-                  alt={activeRoom.photo.alt}
-                  width={activeRoom.photo.width}
-                  height={activeRoom.photo.height}
-                  sizes="(min-width: 768px) 50vw, 100vw"
-                  className="aspect-[3/2] w-full object-cover"
-                />
-              )}
-              <figcaption aria-live="polite" className="display mt-5 text-xl text-primary">
-                {activeRoom.note}
-              </figcaption>
-            </figure>
+            <div className="min-w-0">
+              <BedroomCarousel rooms={bedrooms} selectedIndex={room} onSelect={setRoom} />
+            </div>
           </div>
         </section>
 
         <section id="gather" className="py-16 md:py-28">
           <div className={gutter}>
             <h2 className={h2}>
-              Places <span className="md:block">to gather</span>
+              Places <span className="md:block">To Gather</span>
             </h2>
             <p className="display mt-8 max-w-[26ch] text-xl leading-[1.3]">
               A pub downstairs, a hot tub on the roof and a fire beside the creek
             </p>
           </div>
-          <div
-            ref={gather.ref}
-            role="group"
-            aria-label="Places to gather"
-            tabIndex={0}
-            className="no-scrollbar mt-12 flex snap-x snap-mandatory items-start gap-4 overflow-x-auto overscroll-x-contain px-6 md:mt-16"
-          >
-            {gatherings.map((place, index) => (
-              <article
-                key={place.title}
-                className={`relative isolate flex shrink-0 snap-start items-end overflow-hidden bg-footer text-footer-foreground ${
-                  index % 2 === 0
-                    ? "aspect-[4/5] w-[78vw] md:mt-14 md:aspect-[5/4] md:w-[36vw]"
-                    : "aspect-[4/5] w-[78vw] md:aspect-[3/2] md:w-[50vw]"
-                }`}
-              >
-                {place.photo && (
-                  <Image
-                    src={place.photo.src}
-                    alt={place.photo.alt}
-                    fill
-                    sizes="(min-width: 768px) 50vw, 78vw"
-                    className="-z-10 object-cover"
-                  />
-                )}
-                <div
-                  className={`w-full px-6 py-6 md:px-10 md:py-8 ${place.photo ? "bg-footer/85" : ""}`}
-                >
-                  <h3 className="text-3xl">{place.title}</h3>
-                  <p className={`${copy} mt-3 max-w-[40ch] text-[15px]`}>{place.text}</p>
-                </div>
-              </article>
-            ))}
-          </div>
-          <div className={`${gutter} mt-10`}>
-            <StripControls strip={gather} count={gatherings.length} label="place" />
-          </div>
+          <GatheringCarousel places={gatherings} />
         </section>
 
         <Reserve />
@@ -479,7 +296,7 @@ export function Atelier() {
             </ul>
           </div>
           <div>
-            <p className="display text-4xl">Plan your stay</p>
+            <p className="display text-4xl">Plan Your Stay</p>
             <p className={`${copy} mt-5 max-w-[34ch] text-[15px] text-footer-foreground/85`}>
               Choose your dates and see the price for the whole lodge before you ask the group.
             </p>
@@ -510,9 +327,10 @@ function Reserve() {
   const { quote, stage } = booking;
 
   return (
-    <section id="reserve" className="bg-card py-16 md:py-28">
+    <section id="reserve" className="bg-card pb-32 pt-16 md:pb-36 md:pt-28">
       <div className={gutter}>
-        <h2 className={h2}>Check availability</h2>
+        <p className="display mb-4 text-2xl leading-[1.25] text-primary">Reserve</p>
+        <h2 className={h2}>Check Availability</h2>
         <p className={`${copy} ${indent} mt-8 max-w-[30rem]`}>
           From {money(pricing.nightly)} a night for the whole lodge, with a {pricing.minNights}
           -night minimum. These are sample rates until live pricing is connected.
@@ -556,25 +374,23 @@ function Reserve() {
             <label htmlFor="atelier-guests" className={`${caps} mb-3 block`}>
               Guests
             </label>
-            <div className="relative">
-              <select
-                id="atelier-guests"
-                value={booking.guests}
-                onChange={(event) => booking.setGuests(Number(event.target.value))}
-                className={`${field} appearance-none pr-12`}
+            <Select value={String(booking.guests)} onValueChange={(value) => booking.setGuests(Number(value))}>
+              <SelectTrigger id="atelier-guests" className={`${field} text-foreground shadow-none data-[size=default]:h-[4.25rem] [&>svg]:size-5 [&>svg]:stroke-[1.25] [&>svg]:opacity-100`}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent
+                position="popper"
+                align="start"
+                sideOffset={6}
+                className={`${protoFontVariables} v-atelier max-h-72 w-[var(--radix-select-trigger-width)] rounded-xs border-border bg-card font-[family-name:var(--text-font)] text-foreground shadow-sm motion-reduce:animate-none`}
               >
                 {guestOptions.map((count) => (
-                  <option key={count} value={count}>
+                  <SelectItem key={count} value={String(count)} className="min-h-11 rounded-xs py-3 pl-4 pr-10 text-base focus:bg-accent focus:text-foreground data-[state=checked]:font-medium data-[state=checked]:text-primary [&_svg]:text-primary">
                     {count} {count === 1 ? "guest" : "guests"}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-              <ChevronDown
-                aria-hidden="true"
-                strokeWidth={1.25}
-                className="pointer-events-none absolute right-5 top-1/2 size-5 -translate-y-1/2"
-              />
-            </div>
+              </SelectContent>
+            </Select>
           </div>
           <button
             type="submit"
@@ -584,7 +400,7 @@ function Reserve() {
           </button>
         </form>
 
-        <div aria-live="polite" className="mt-10 md:min-h-56">
+        <div aria-live="polite" className={booking.error || (quote && stage !== "editing") ? "mt-10" : undefined}>
           {booking.error && (
             <p role="alert" className="border-l-2 border-primary pl-4 text-primary">
               {booking.error}

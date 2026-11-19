@@ -3,6 +3,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 /* Shared by Tailwind utilities and future Radix-based shadcn components. */
 :root {
   color-scheme: light;

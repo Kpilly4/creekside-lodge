@@ -48,6 +48,7 @@ export function Harness({ initial }: { initial: number }) {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
       const target = event.target as HTMLElement;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable) return;
       if (event.metaKey || event.ctrlKey || event.altKey) return;
